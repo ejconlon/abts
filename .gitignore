@@ -1,0 +1,13 @@
+*.swo
+*.bak
+*.swp
+*~
+*.log
+*.tmp
+target/
+project/
+programs/target/
+.\#*
+\#*\#
+.idea
+.DS_Store
