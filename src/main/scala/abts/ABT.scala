@@ -1,5 +1,7 @@
 package abts
 
+import prelude._
+
 // I don't know of a better way to do this.  The compiler doesn't like this one:
 // type Fix[F] = G[F, Fix[F]]
 case class Fix[G[_[_], _], F[_]](unfix: G[F, Fix[G, F]])
@@ -54,21 +56,29 @@ object ABT {
   def freeVars[F[_]](exp: ABT[F])(implicit foldable: Foldable[F]): Set[String] =
     exp.unfix.freeVars
 
-  private[this] def mapWrapped[F[_]](bind: Bind[F, ABT[F]])(f: ABT[F] => ABT[F])(implicit foldable: Foldable[F]): ABT[F] =
+  private[this] def mapWrapped[F[_]](bind: Bind[F, ABT[F]])(f: ABT[F] => ABT[F])(implicit foldable: Foldable[F]): Bind[F, ABT[F]] =
     bind match {
-      case Bind.Var(n) => Var(n)
-      case Bind.Abs(n, b) => Abs(n, mapWrapped(b)(f))
-      case Bind.Wrap(t) => Wrap(foldable.map(t)(f))
+      case Bind.Wrap(t) => Bind.Wrap(foldable.map(t)(f))
+      case _ => bind
     }
 
-  // NOT CAPTURE-AVOIDING!
   def substitute[F[_]](name: String, exp: ABT[F], body: ABT[F])(implicit foldable: Foldable[F]): ABT[F] =
     body.unfix.bind match {
       case Bind.Var(n) if (n == name) => exp
-      case Bind.Abs(n, b) if (n != name) => Abs(n, mapWrapped(b) { substitute(name, exp, _) })
+      case Bind.Abs(n, b) =>
+        val freshName = fresh(name, exp.unfix.freeVars ++ body.unfix.freeVars)
+        val freshBody: Bind[F, ABT[F]] =
+          if (freshName != name) mapWrapped(b) { rename(name, freshName, _) }
+          else b
+        Abs(freshName, fix(mapWrapped(freshBody) { substitute(name, exp, _) }))
       case Bind.Wrap(t) => Wrap(foldable.map(t) { substitute(name, exp, _) })
       case _ => body
     }
+
+  @scala.annotation.tailrec
+  private[this] def fresh(name: String, freeVars: Set[String]): String =
+    if (freeVars.contains(name)) fresh(name + "'", freeVars)
+    else name
 
   private[this] def rename[F[_]](fromName: String, toName: String, body: ABT[F])(implicit foldable: Foldable[F]): ABT[F] =
     body.unfix.bind match {

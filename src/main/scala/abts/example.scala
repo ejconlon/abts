@@ -1,5 +1,7 @@
 package abts
 
+import prelude._
+
 /** Our term language with binding removed */
 sealed trait TermF[A]
 object TermF {
