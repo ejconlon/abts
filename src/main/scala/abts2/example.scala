@@ -9,6 +9,7 @@ object TermF {
   case class True[A]() extends TermF[A]
   case class False[A]() extends TermF[A]
   case class If[A](guard: A, thenCase: A, elseCase: A) extends TermF[A]
+  case class Abs[A](body: A) extends TermF[A]
   case class App[A](left: A, right: A) extends TermF[A]
 
   // I heard some langauges write this for you.
@@ -18,6 +19,7 @@ object TermF {
         case True() => True()
         case False() => False()
         case If(guard, thenCase, elseCase) => If(f(guard), f(thenCase), f(elseCase))
+        case Abs(body) => Abs(f(body))
         case App(left, right) => App(f(left), f(right))
       }
 
@@ -26,6 +28,7 @@ object TermF {
         case True() => monoid.zero
         case False() => monoid.zero
         case If(guard, thenCase, elseCase) => monoid.plus(monoid.plus(guard, thenCase), elseCase)
+        case Abs(body) => body
         case App(left, right) => monoid.plus(left, right)
       }
   }
@@ -39,20 +42,22 @@ object Type {
   case class Arrow(ty1: Type, ty2: Type) extends Type
 }
 
-/** Our term language */
-sealed trait Term {
+object Manual {
   import Term.{True, False, If, Abs, App, Var}
 
-  def freeVars: Seq[String] =
-    this match {
+  def freeVars(term: Term): Seq[String] =
+    term match {
       case True => Seq.empty
       case False => Seq.empty
       case If(guard, thenCase, elseCase) => Seq.empty
-      case Abs(name, body) => body.freeVars.filterNot { _ == name }
-      case App(left, right) => (left.freeVars ++ right.freeVars).distinct
+      case Abs(name, body) => freeVars(body).filterNot { _ == name }
+      case App(left, right) => (freeVars(left) ++ freeVars(right)).distinct
       case Var(name) => Seq(name)
     }
 }
+
+/** Our term language */
+sealed trait Term
 
 object Term {
   case object True extends Term
@@ -62,21 +67,21 @@ object Term {
   case class App(left: Term, right: Term) extends Term
   case class Var(name: String) extends Term
 
-  /*def toABT(xterm: Term): ABT[TermF] =
+  def toScope(xterm: Term): Scope[TermF] =
     xterm match {
       case True =>
-        ABT.Wrap(TermF.True())
+        ABT.In[TermF](TermF.True()).scope(Seq.empty)
       case False =>
-        ABT.Wrap(TermF.False())
+        ABT.In[TermF](TermF.False()).scope(Seq.empty)
       case If(guard, thenCase, elseCase) =>
-        ABT.Wrap(TermF.If(toABT(guard), toABT(thenCase), toABT(elseCase)))
+        ABT.In[TermF](TermF.If(toScope(guard), toScope(thenCase), toScope(elseCase))).scope(Seq.empty)
       case Abs(name, body) =>
-        ABT.Abs(name, toABT(body))
+        ABT.In[TermF](TermF.Abs(toScope(body))).scope(Seq(name))
       case App(left, right) =>
-        ABT.Wrap(TermF.App(toABT(left), toABT(right)))
+        ABT.In[TermF](TermF.App(toScope(left), toScope(right))).scope(Seq.empty)
       case Var(name) =>
-        ABT.Var(name)
-    }*/
+        ABT.Var[TermF](Variable.Free(name)).scope(Seq.empty)
+    }
 
   /*def fromABT(exp: ABT[TermF]): Term =
     exp match {
