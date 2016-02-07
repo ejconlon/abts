@@ -4,6 +4,7 @@ import prelude._
 
 /** Our term language with binding removed */
 sealed trait TermF[A]
+
 object TermF {
   case class True[A]() extends TermF[A]
   case class False[A]() extends TermF[A]
@@ -32,13 +33,27 @@ object TermF {
 
 /** Our types */
 sealed trait Type
+
 object Type {
   case object Bool extends Type
   case class Arrow(ty1: Type, ty2: Type) extends Type
 }
 
 /** Our term language */
-sealed trait Term
+sealed trait Term {
+  import Term.{True, False, If, Abs, App, Var}
+
+  def freeVars: Seq[String] =
+    this match {
+      case True => Seq.empty
+      case False => Seq.empty
+      case If(guard, thenCase, elseCase) => Seq.empty
+      case Abs(name, body) => body.freeVars.filterNot { _ == name }
+      case App(left, right) => (left.freeVars ++ right.freeVars).distinct
+      case Var(name) => Seq(name)
+    }
+}
+
 object Term {
   case object True extends Term
   case object False extends Term

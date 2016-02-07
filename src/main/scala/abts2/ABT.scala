@@ -5,7 +5,7 @@ import prelude._
 // https://github.com/psygnisfive/SimpleFP-v2/blob/master/src/Utils/ABT.hs
 
 sealed trait Variable {
-  import Variable.{Free, Bound, Meta}
+  import Variable.{Free, Bound} //, Meta}
 
   def name: String
   def equals(other: Variable): Boolean =
@@ -65,8 +65,8 @@ sealed trait ABT[F[_]] {
       }
 
   def scope(names: Seq[String])(implicit foldable: Foldable[F]): Scope[F] = {
-    val bound: ABT[F] = ???
-    Scope(names, freeVars, bound)
+    val bound: ABT[F] = bind(0, names.map { Variable.Free(_) })
+    Scope(names, bound.freeVars, bound)
   }
 }
 
