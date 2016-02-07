@@ -1,7 +1,17 @@
 package object prelude {
 
+  type Id[X] = X
+
+  def id[X](x: X): X = x
+
   trait Functor[F[_]] {
     def map[A, B](context: F[A])(f: A => B): F[B]
+  }
+
+  trait Bifunctor[F[_, _]] {
+    def dimap[A, B, Z, C](f: F[A, B])(l: Z => A)(r: B => C): F[Z, C]
+    def lmap[A, B, Z](f: F[A, B])(l: Z => A): F[Z, B] = dimap[A, B, Z, B](f)(l)(id)
+    def rmap[A, B, C](f: F[A, B])(r: B => C): F[A, C] = dimap[A, B, A, C](f)(id)(r)
   }
 
   trait Monoid[A] {
