@@ -36,9 +36,16 @@ package object prelude {
       override def plus(l: Vector[A], r: Vector[A]) = l ++ r
     }
 
+    class SeqMonoid[A] extends Monoid[Seq[A]] {
+      override val zero = Seq.empty[A]
+      override def plus(l: Seq[A], r: Seq[A]) = l ++ r
+    }
+
     implicit def setMonoid[A]: Monoid[Set[A]] = new SetMonoid[A]
 
     implicit def vectorMonoid[A]: Monoid[Vector[A]] = new VectorMonoid[A]
+
+    implicit def seqMonoid[A]: Monoid[Seq[A]] = new SeqMonoid[A]
   }
 
 }

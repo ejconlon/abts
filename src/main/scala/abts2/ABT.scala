@@ -25,11 +25,44 @@ object Variable {
   }
 }
 
-sealed trait ABT[F[_]]
+sealed trait ABT[F[_]] {
+  import ABT.{Var, In}
+
+  def fold[A](
+    onVar: Variable => A,
+    onRec: F[A] => A,
+    onScope: (Int, A) => A
+  )(
+    implicit functor: Functor[F]
+  ): A =
+    this match {
+      case Var(variable) => onVar(variable)
+      case In(term) => onRec(functor.map(term) { _.fold[A](onVar, onRec, onScope) })
+    }
+
+  def freeVars(implicit foldable: Foldable[F]): Seq[Variable.Free] =
+    fold[Seq[Variable.Free]](
+      {
+        case Variable.Free(name) => Seq(Variable.Free(name))
+        case _ => Seq.empty[Variable.Free]
+      },
+      { foldable.fold[Seq[Variable.Free]](_) },
+      { case (_, fvs) => fvs }
+    )
+}
 
 object ABT {
   case class Var[F[_]](variable: Variable) extends ABT[F]
   case class In[F[_]](term: F[Scope[F]]) extends ABT[F]
 }
 
-case class Scope[F[_]](names: Seq[String], freeNames: Seq[Variable.Free], body: ABT[F])
+case class Scope[F[_]](names: Seq[String], freeNames: Seq[Variable.Free], body: ABT[F]) {
+  def fold[A](
+    onVar: Variable => A,
+    onRec: F[A] => A,
+    onScope: (Int, A) => A
+  )(
+    implicit functor: Functor[F]
+  ): A =
+    onScope(names.size, body.fold[A](onVar, onRec, onScope))
+}
