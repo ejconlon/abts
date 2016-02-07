@@ -49,6 +49,25 @@ sealed trait ABT[F[_]] {
       { foldable.fold[Seq[Variable.Free]](_) },
       { case (_, fvs) => fvs }
     )
+
+  def bind(numBinders: Int, fvs: Seq[Variable.Free])(implicit foldable: Foldable[F]): ABT[F] =
+    if (fvs.isEmpty)
+      this
+    else
+      this match {
+        case Var(fv@Variable.Free(_)) =>
+          fvs.zipWithIndex.find { case (x, _) => x == fv } match {
+            case None => this
+            case Some((fv, i)) => Var(Variable.Bound(fv.name, i + numBinders))
+          }
+        case In(term) => In(foldable.map(term) { _.bind(numBinders, fvs) })
+        case _ => this
+      }
+
+  def scope(names: Seq[String])(implicit foldable: Foldable[F]): Scope[F] = {
+    val bound: ABT[F] = ???
+    Scope(names, freeVars, bound)
+  }
 }
 
 object ABT {
@@ -65,4 +84,13 @@ case class Scope[F[_]](names: Seq[String], freeNames: Seq[Variable.Free], body: 
     implicit functor: Functor[F]
   ): A =
     onScope(names.size, body.fold[A](onVar, onRec, onScope))
+
+  def bind(numBinders: Int, fvs: Seq[Variable.Free])(implicit foldable: Foldable[F]): Scope[F] =
+    if (fvs.isEmpty)
+      this
+    else {
+      val newBody = body.bind(numBinders + fvs.size, freeNames)
+      val newFreeNames = newBody.freeVars
+      Scope(names, newFreeNames, newBody)
+    }
 }
