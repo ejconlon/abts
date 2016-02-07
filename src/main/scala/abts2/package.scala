@@ -1,0 +1,2 @@
+package object abts2 {
+}
