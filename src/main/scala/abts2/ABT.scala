@@ -12,7 +12,7 @@ sealed trait Variable {
     (this, other) match {
       case (Free(x), Free(y)) => x == y
       case (Bound(_, i), Bound(_, j)) => i == j
-      case (Meta(i), Meta(j)) => i == j
+      //case (Meta(i), Meta(j)) => i == j
       case _ => false
     }
 }
@@ -20,9 +20,9 @@ sealed trait Variable {
 object Variable {
   case class Free(name: String) extends Variable
   case class Bound(name: String, index: Int) extends Variable
-  case class Meta(number: Int) extends Variable {
-    override def name = "?" + number
-  }
+  //case class Meta(number: Int) extends Variable {
+  //  override def name = "?" + number
+  //}
 }
 
 sealed trait ABT[F[_]] {
