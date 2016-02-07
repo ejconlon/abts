@@ -49,7 +49,7 @@ object Manual {
     term match {
       case True => Seq.empty
       case False => Seq.empty
-      case If(guard, thenCase, elseCase) => Seq.empty
+      case If(guard, thenCase, elseCase) => (freeVars(guard) ++ freeVars(thenCase) ++ freeVars(elseCase)).distinct
       case Abs(name, body) => freeVars(body).filterNot { _ == name }
       case App(left, right) => (freeVars(left) ++ freeVars(right)).distinct
       case Var(name) => Seq(name)
