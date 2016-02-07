@@ -45,7 +45,7 @@ object ABTSpec {
     assert(manualActual == expected, "manual")
     val scope = toScope(term)
     val scopeActual = scope.freeNames.map { _.name }
-    assert(scopeActual == expected, "scope")
+    assert(scopeActual == expected, "scope: " + scope)
   }
 }
 
