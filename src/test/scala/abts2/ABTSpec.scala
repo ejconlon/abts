@@ -62,7 +62,7 @@ class ABTSpec extends FunSuite with Checkers {
   import ABTSpec._
   import Term._
 
-  private[this] val minSuccessful = 10000
+  private[this] val minSuccessful = 1000
 
   implicit override val generatorDrivenConfig =
     PropertyCheckConfig(minSuccessful = minSuccessful, maxDiscarded = 5 * minSuccessful)
@@ -83,7 +83,7 @@ class ABTSpec extends FunSuite with Checkers {
     assertFreeVars(If(If(False,Var("h"),Var("h")),Abs("pxO",True),Var("gah")), Seq("h", "gah"))
   }
 
-  /*test("calculate free vars with gens") {
+  test("calculate free vars with gens") {
     check {
       forAll(termGen) { term =>
         val expected = Manual.freeVars(term)
@@ -92,7 +92,7 @@ class ABTSpec extends FunSuite with Checkers {
         actual == expected
       }
     }
-  }*/
+  }
 
   /*test("works") {
     val a = Term.App(Term.Abs("x", Term.Var("x")), Term.Var("y"))
