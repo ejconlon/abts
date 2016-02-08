@@ -72,10 +72,23 @@ object Term {
   case class App(left: Term, right: Term) extends Term
   case class Var(name: String) extends Term
 
-  //def fromScope(scope: Scope[TermF]): Term =
-  //  scope match {
-  //    _ => ???
-  //}
+  def fromScope(scope: Scope[TermF]): Term =
+    scope.body match {
+      case ABT.Var(Variable.Free(name)) => Var(name)
+      case ABT.Var(Variable.Bound(name, _)) => Var(name)
+      case ABT.In(term) =>
+        term match {
+          case TermF.True() => True
+          case TermF.False() => False
+          case TermF.If(guard, thenCase, elseCase) =>
+            If(fromScope(guard), fromScope(thenCase), fromScope(elseCase))
+          case TermF.Abs(body) =>
+            assert(scope.names.size == 1)
+            Abs(scope.names.head, fromScope(body))
+          case TermF.App(left, right) =>
+            App(fromScope(left), fromScope(right))
+        }
+    }
 }
 
 /** Used only for testing correctness of Scopes. */

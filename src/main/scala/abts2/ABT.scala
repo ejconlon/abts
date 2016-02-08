@@ -64,9 +64,9 @@ sealed trait ABT[F[_]] {
         case _ => this
       }
 
-  def scope(names: Seq[String])(implicit foldable: Foldable[F]): Scope[F] = {
-    val bound: ABT[F] = bind(0, names.map { Variable.Free(_) })
-    Scope(names, bound.freeVars, bound)
+  def scope(boundNames: Seq[String])(implicit foldable: Foldable[F]): Scope[F] = {
+    val bound: ABT[F] = bind(0, boundNames.map { Variable.Free(_) })
+    Scope(boundNames, bound.freeVars, bound)
   }
 }
 
