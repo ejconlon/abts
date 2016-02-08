@@ -42,8 +42,45 @@ object Type {
   case class Arrow(ty1: Type, ty2: Type) extends Type
 }
 
+
+/** Our term language */
+sealed trait Term {
+  import Term._
+
+  def toScope: Scope[TermF] =
+    this match {
+      case True =>
+        ABT.In[TermF](TermF.True()).scope(Seq.empty)
+      case False =>
+        ABT.In[TermF](TermF.False()).scope(Seq.empty)
+      case If(guard, thenCase, elseCase) =>
+        ABT.In[TermF](TermF.If(guard.toScope, thenCase.toScope, elseCase.toScope)).scope(Seq.empty)
+      case Abs(name, body) =>
+        ABT.In[TermF](TermF.Abs(body.toScope)).scope(Seq(name))
+      case App(left, right) =>
+        ABT.In[TermF](TermF.App(left.toScope, right.toScope)).scope(Seq.empty)
+      case Var(name) =>
+        ABT.Var[TermF](Variable.Free(name)).scope(Seq.empty)
+    }
+}
+
+object Term {
+  case object True extends Term
+  case object False extends Term
+  case class If(guard: Term, thenCase: Term, elseCase: Term) extends Term
+  case class Abs(name: String, body: Term) extends Term
+  case class App(left: Term, right: Term) extends Term
+  case class Var(name: String) extends Term
+
+  //def fromScope(scope: Scope[TermF]): Term =
+  //  scope match {
+  //    _ => ???
+  //}
+}
+
+/** Used only for testing correctness of Scopes. */
 object Manual {
-  import Term.{True, False, If, Abs, App, Var}
+  import Term._
 
   def freeVars(term: Term): Seq[String] =
     term match {
@@ -54,46 +91,4 @@ object Manual {
       case App(left, right) => (freeVars(left) ++ freeVars(right)).distinct
       case Var(name) => Seq(name)
     }
-}
-
-/** Our term language */
-sealed trait Term
-
-object Term {
-  case object True extends Term
-  case object False extends Term
-  case class If(guard: Term, thenCase: Term, elseCase: Term) extends Term
-  case class Abs(name: String, body: Term) extends Term
-  case class App(left: Term, right: Term) extends Term
-  case class Var(name: String) extends Term
-
-  def toScope(xterm: Term): Scope[TermF] =
-    xterm match {
-      case True =>
-        ABT.In[TermF](TermF.True()).scope(Seq.empty)
-      case False =>
-        ABT.In[TermF](TermF.False()).scope(Seq.empty)
-      case If(guard, thenCase, elseCase) =>
-        ABT.In[TermF](TermF.If(toScope(guard), toScope(thenCase), toScope(elseCase))).scope(Seq.empty)
-      case Abs(name, body) =>
-        ABT.In[TermF](TermF.Abs(toScope(body))).scope(Seq(name))
-      case App(left, right) =>
-        ABT.In[TermF](TermF.App(toScope(left), toScope(right))).scope(Seq.empty)
-      case Var(name) =>
-        ABT.Var[TermF](Variable.Free(name)).scope(Seq.empty)
-    }
-
-  /*def fromABT(exp: ABT[TermF]): Term =
-    exp match {
-      case ABT.Var(name) => Term.Var(name)
-      case ABT.Abs(name, body) => Term.Abs(name, fromABT(body))
-      case ABT.Wrap(yterm) =>
-        yterm match {
-          case TermF.True() => Term.True
-          case TermF.False() => Term.False
-          case TermF.If(guard, thenCase, elseCase) =>
-            Term.If(fromABT(guard), fromABT(thenCase), fromABT(elseCase))
-          case TermF.App(left, right) => Term.App(fromABT(left), fromABT(right))
-        }
-    }*/
 }

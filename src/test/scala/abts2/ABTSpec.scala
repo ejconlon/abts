@@ -10,7 +10,10 @@ object ABTSpec {
   import org.scalatest.Assertions._
   import Term._
 
-  def termGen: Gen[Term] = Gen.sized { sizedTermGen(_) }
+  val termGen: Gen[Term] = Gen.sized { sizedTermGen(_) }
+
+  private[this] val genName: Gen[String] =
+    Gen.identifier
 
   private[this] def sizedTermGen(size: Int): Gen[Term] =
     if (size == 0) Gen.oneOf(Gen.const(True), Gen.const(False), varGen)
@@ -18,32 +21,38 @@ object ABTSpec {
 
   private[this] def ifGen(size: Int): Gen[Term] =
     for {
-      g <- sizedTermGen(size - 1)
-      t <- sizedTermGen(size - 1)
-      e <- sizedTermGen(size - 1)
+      gs <- Gen.chooseNum(0, size - 1)
+      g <- sizedTermGen(gs)
+      ts <- Gen.chooseNum(0, size - 1)
+      t <- sizedTermGen(ts)
+      es <- Gen.chooseNum(0, size - 1)
+      e <- sizedTermGen(es)
     } yield If(g, t, e)
 
   private[this] def appGen(size: Int): Gen[Term] =
     for {
-      l <- sizedTermGen(size - 1)
-      r <- sizedTermGen(size - 1)
+      ls <- Gen.chooseNum(0, size - 1)
+      l <- sizedTermGen(ls)
+      rs <- Gen.chooseNum(0, size - 1)
+      r <- sizedTermGen(rs)
     } yield App(l, r)
 
   private[this] def absGen(size: Int): Gen[Term] =
     for {
-      n <- arbitrary[String]
-      b <- sizedTermGen(size - 1)
+      n <- genName
+      bs <- Gen.chooseNum(0, size - 1)
+      b <- sizedTermGen(bs)
     } yield Abs(n, b)
 
-  private[this] def varGen: Gen[Term] =
+  private[this] val varGen: Gen[Term] =
     for {
-      n <- arbitrary[String]
+      n <- genName
     } yield Var(n)
 
   def assertFreeVars(term: Term, expected: Seq[String]) {
     val manualActual = Manual.freeVars(term)
     assert(manualActual == expected, "manual")
-    val scope = toScope(term)
+    val scope = term.toScope
     val scopeActual = scope.freeNames.map { _.name }
     assert(scopeActual == expected, "scope: " + scope)
   }
@@ -52,6 +61,11 @@ object ABTSpec {
 class ABTSpec extends FunSuite with Checkers {
   import ABTSpec._
   import Term._
+
+  private[this] val minSuccessful = 10000
+
+  implicit override val generatorDrivenConfig =
+    PropertyCheckConfig(minSuccessful = minSuccessful, maxDiscarded = 5 * minSuccessful)
 
   test("calculate free vars (1)") {
     assertFreeVars(App(Abs("x", Var("x")), Var("y")), Seq("y"))
@@ -65,11 +79,15 @@ class ABTSpec extends FunSuite with Checkers {
     assertFreeVars(App(Abs("a",If(False,Var("b"),True)),App(If(False,Var("c"),False),Abs("d",False))), Seq("b", "c"))
   }
 
+  test("calculate free vars (4)") {
+    assertFreeVars(If(If(False,Var("h"),Var("h")),Abs("pxO",True),Var("gah")), Seq("h", "gah"))
+  }
+
   /*test("calculate free vars with gens") {
     check {
       forAll(termGen) { term =>
         val expected = Manual.freeVars(term)
-        val scope = toScope(term)
+        val scope = term.toScope
         val actual = scope.freeNames.map { _.name }
         actual == expected
       }
