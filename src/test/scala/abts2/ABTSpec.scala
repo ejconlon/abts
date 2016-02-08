@@ -55,6 +55,8 @@ object ABTSpec {
     val scope = term.toScope
     val scopeActual = scope.freeNames.map { _.name }
     assert(scopeActual == expected, "scope: " + scope)
+    val termAgain = Term.fromScope(scope)
+    assert(termAgain == term)
   }
 }
 
@@ -89,7 +91,8 @@ class ABTSpec extends FunSuite with Checkers {
         val expected = Manual.freeVars(term)
         val scope = term.toScope
         val actual = scope.freeNames.map { _.name }
-        actual == expected
+        val termAgain = Term.fromScope(scope)
+        (actual == expected) && (termAgain == term)
       }
     }
   }
