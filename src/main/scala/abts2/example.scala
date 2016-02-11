@@ -32,6 +32,59 @@ object TermF {
         case App(left, right) => monoid.plus(left, right)
       }
   }
+
+  def toTerm(scope: Scope[TermF]): Term =
+    scope.body match {
+      case ABT.Var(Variable.Free(name)) => Term.Var(name)
+      case ABT.Var(Variable.Bound(name, _)) => Term.Var(name)
+      case ABT.In(term) =>
+        term match {
+          case True() => Term.True
+          case False() => Term.False
+          case If(guard, thenCase, elseCase) =>
+            Term.If(toTerm(guard), toTerm(thenCase), toTerm(elseCase))
+          case Abs(body) =>
+            assert(scope.names.size == 1)
+            Term.Abs(scope.names.head, toTerm(body))
+          case App(left, right) =>
+            Term.App(toTerm(left), toTerm(right))
+        }
+    }
+
+  /*def isValue(context: Seq[(String, ABT[TermF])], abt: ABT[TermF]): Boolean =
+    abt match {
+      case ABT.In[TermF](context, term) =>
+        term match {
+          case True() => true
+          case False() => true
+          case Abs(_) => true
+          case _ => false
+        }
+      case ABT.Var[TermF](Variable.Bound(_, index)) => canLookup(context, index)
+      case _ => false
+    }*/
+
+  @scala.annotation.tailrec
+  def lookup[A](context: Seq[A], index: Int): Option[A] =
+    if (index == 0) context.headOption
+    else lookup(context.tail, index - 1)
+
+  def canLookup[A](context: Seq[A], index: Int): Boolean =
+    index < context.size
+
+  def smallStep(context: Seq[(String, ABT[TermF])], abt: ABT[TermF]): Option[ABT[TermF]] =
+    abt match {
+      case ABT.In(term) =>
+        term match {
+          case If(guard, thenCase, elseCase) => ???
+          case _ => ???
+        }
+      case ABT.Var(variable) =>
+        variable match {
+          case Variable.Bound(_, index) => lookup(context, index).map { _._2 }
+          case _ => None
+        }
+    }
 }
 
 /** Our types */
@@ -71,24 +124,6 @@ object Term {
   case class Abs(name: String, body: Term) extends Term
   case class App(left: Term, right: Term) extends Term
   case class Var(name: String) extends Term
-
-  def fromScope(scope: Scope[TermF]): Term =
-    scope.body match {
-      case ABT.Var(Variable.Free(name)) => Var(name)
-      case ABT.Var(Variable.Bound(name, _)) => Var(name)
-      case ABT.In(term) =>
-        term match {
-          case TermF.True() => True
-          case TermF.False() => False
-          case TermF.If(guard, thenCase, elseCase) =>
-            If(fromScope(guard), fromScope(thenCase), fromScope(elseCase))
-          case TermF.Abs(body) =>
-            assert(scope.names.size == 1)
-            Abs(scope.names.head, fromScope(body))
-          case TermF.App(left, right) =>
-            App(fromScope(left), fromScope(right))
-        }
-    }
 }
 
 /** Used only for testing correctness of Scopes. */

@@ -2,13 +2,14 @@ package abts2
 
 import prelude._
 
+// Translated from
 // https://github.com/psygnisfive/SimpleFP-v2/blob/master/src/Utils/ABT.hs
 
 sealed trait Variable {
   import Variable.{Free, Bound} //, Meta}
 
   def name: String
-  def equals(other: Variable): Boolean =
+  def matches(other: Variable): Boolean =
     (this, other) match {
       case (Free(x), Free(y)) => x == y
       case (Bound(_, i), Bound(_, j)) => i == j
@@ -56,7 +57,7 @@ sealed trait ABT[F[_]] {
     else
       this match {
         case Var(fv@Variable.Free(_)) =>
-          fvs.zipWithIndex.find { case (x, _) => x == fv } match {
+          fvs.zipWithIndex.find { case (x, _) => x.matches(fv) } match {
             case None => this
             case Some((fv, i)) => Var(Variable.Bound(fv.name, i + numBinders))
           }
@@ -68,6 +69,12 @@ sealed trait ABT[F[_]] {
     val bound: ABT[F] = bind(0, boundNames.map { Variable.Free(_) })
     Scope(boundNames, bound.freeVars, bound)
   }
+
+  def shift(l: Int, i: Int)(implicit functor: Functor[F]): ABT[F] =
+    ???
+
+  def subst(numBinders: Int, assigned: Seq[(Variable.Free, ABT[F])])(implicit foldable: Foldable[F]): ABT[F] =
+    ???
 }
 
 object ABT {
@@ -93,4 +100,10 @@ case class Scope[F[_]](names: Seq[String], freeNames: Seq[Variable.Free], body: 
       val newFreeNames = newBody.freeVars
       Scope(names, newFreeNames, newBody)
     }
+
+  def shift(l: Int, i: Int)(implicit functor: Functor[F]): Scope[F] =
+    ???
+
+  def subst(numBinders: Int, assigned: Seq[(Variable.Free, ABT[F])])(implicit foldable: Foldable[F]): Scope[F] =
+    ???
 }
